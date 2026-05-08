@@ -196,22 +196,22 @@ jobs:
               COMMON_FLAGS="--extract-audio --audio-format mp3 --audio-quality 0 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
               
             elif [ "$QUALITY" = "best" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort hdr,+fps,+res,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--merge-output-format mp4 --format-sort hdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
               
             elif [ "$QUALITY" = "2160" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort hdr,+fps,+res,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--merge-output-format mp4 --format-sort hdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
               
             elif [ "$QUALITY" = "1440" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort hdr,+fps,+res,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--merge-output-format mp4 --format-sort hdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
               
             elif [ "$QUALITY" = "1080" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort sdr,+fps,+res,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--merge-output-format mp4 --format-sort hdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
               
             elif [ "$QUALITY" = "720" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort sdr,+fps,+res,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--merge-output-format mp4 --format-sort sdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
               
             elif [ "$QUALITY" = "480" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort sdr,+fps,+res,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--merge-output-format mp4 --format-sort sdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
             fi
 
             case $METHOD in
