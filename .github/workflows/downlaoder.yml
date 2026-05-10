@@ -7,6 +7,11 @@ on:
         description: '🔗 YouTube video URL(s) — separate multiple URLs with spaces'
         required: true
         type: string
+      download_subtitles:
+        description: '📝 Download subtitles (English & Persian)'
+        required: false
+        default: false
+        type: boolean
       quality:
         description: '🎬 Video quality'
         required: false
@@ -123,6 +128,7 @@ jobs:
 
           QUALITY="${YT_QUALITY}"
           ZIP_PASSWORD="${YT_PASSWORD}"
+          DOWNLOAD_SUBS="${{ github.event.inputs.download_subtitles }}"
 
           # REDUCED from 90MB to 45MB - under GitHub's 50MB recommendation
           SPLIT_MB=45
@@ -146,6 +152,11 @@ jobs:
           else
             echo "Password protection: DISABLED"
           fi
+          if [ "$DOWNLOAD_SUBS" = "true" ]; then
+            echo "Subtitles: ENABLED (en, fa)"
+          else
+            echo "Subtitles: DISABLED"
+          fi
           echo ""
 
           sanitize_name() {
@@ -161,25 +172,28 @@ jobs:
           # ============================================================
           case "$QUALITY" in
             "audio")
-              FORMAT="bestaudio/bestaudio*"
+              FORMAT="bestaudio/bestaudio*/best"
               ;;
             "best")
               FORMAT="bestvideo+bestaudio/bestvideo*+bestaudio*/best"
               ;;
             "2160"|"4k")
-              FORMAT="bestvideo[height=2160]+bestaudio/bestvideo[height<=2160]+bestaudio/bestvideo[height=2160]*+bestaudio*/bestvideo[height<=2160]*+bestaudio*"
+              FORMAT="bestvideo[height<=2160]+bestaudio/bestvideo[height<=2160]*+bestaudio*/bestvideo+bestaudio/best"
               ;;
             "1440"|"2k")
-              FORMAT="bestvideo[height=1440]+bestaudio/bestvideo[height<=1440]+bestaudio/bestvideo[height=1440]*+bestaudio*/bestvideo[height<=1440]*+bestaudio*"
+              FORMAT="bestvideo[height<=1440]+bestaudio/bestvideo[height<=1440]*+bestaudio*/bestvideo+bestaudio/best"
               ;;
             "1080")
-              FORMAT="bestvideo[height=1080]+bestaudio/bestvideo[height<=1080]+bestaudio/bestvideo[height=1080]*+bestaudio*/bestvideo[height<=1080]*+bestaudio*"
+              FORMAT="bestvideo[height<=1080]+bestaudio/bestvideo[height<=1080]*+bestaudio*/bestvideo+bestaudio/best"
               ;;
             "720")
-              FORMAT="bestvideo[height=720]+bestaudio/bestvideo[height<=720]+bestaudio/bestvideo[height=720]*+bestaudio*/bestvideo[height<=720]*+bestaudio*"
+              FORMAT="bestvideo[height<=720]+bestaudio/bestvideo[height<=720]*+bestaudio*/bestvideo+bestaudio/best"
               ;;
             "480")
-              FORMAT="bestvideo[height=480]+bestaudio/bestvideo[height<=480]+bestaudio/bestvideo[height=480]*+bestaudio*/bestvideo[height<=480]*+bestaudio*"
+              FORMAT="bestvideo[height<=480]+bestaudio/bestvideo[height<=480]*+bestaudio*/bestvideo+bestaudio/best"
+              ;;
+            "360")
+              FORMAT="bestvideo[height<=360]+bestaudio/bestvideo[height<=360]*+bestaudio*/bestvideo+bestaudio/best"
               ;;
             *)
               FORMAT="bestvideo+bestaudio/bestvideo*+bestaudio*/best"
@@ -193,25 +207,11 @@ jobs:
             echo "Trying download method $METHOD..."
 
             if [ "$QUALITY" = "audio" ]; then
-              COMMON_FLAGS="--extract-audio --audio-format mp3 --audio-quality 0 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
-              
+              COMMON_FLAGS="--extract-audio --audio-format mp3 --audio-quality 0 --write-thumbnail --convert-thumbnails jpg --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
             elif [ "$QUALITY" = "best" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort hdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
-              
-            elif [ "$QUALITY" = "2160" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort hdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
-              
-            elif [ "$QUALITY" = "1440" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort hdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
-              
-            elif [ "$QUALITY" = "1080" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort hdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
-              
-            elif [ "$QUALITY" = "720" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort sdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
-              
-            elif [ "$QUALITY" = "480" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort sdr,+fps,+codec:vp9.2,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--merge-output-format mp4 --format-sort res,+codec:vp9.1,+size --write-thumbnail --convert-thumbnails jpg --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+            else
+              COMMON_FLAGS="--merge-output-format mp4 --write-thumbnail --convert-thumbnails jpg --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
             fi
 
             case $METHOD in
@@ -378,11 +378,11 @@ jobs:
             local TMP_DIR=$3
             echo "Trying download method $METHOD..."
             if [ "$QUALITY" = "audio" ]; then
-              COMMON_FLAGS="--extract-audio --audio-format mp3 --audio-quality 0 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--extract-audio --audio-format mp3 --audio-quality 0 --write-thumbnail --convert-thumbnails jpg --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
             elif [ "$QUALITY" = "best" ]; then
-              COMMON_FLAGS="--merge-output-format mp4 --format-sort res,+codec:vp9.1,+size --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--merge-output-format mp4 --format-sort res,+codec:vp9.1,+size --write-thumbnail --convert-thumbnails jpg --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
             else
-              COMMON_FLAGS="--merge-output-format mp4 --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
+              COMMON_FLAGS="--merge-output-format mp4 --write-thumbnail --convert-thumbnails jpg --no-cache-dir --output ${TMP_DIR}/%(title)s.%(ext)s --no-part --no-playlist --retries 5 --fragment-retries 5 --no-check-certificates --concurrent-fragments 8 --buffer-size 16K --http-chunk-size 10M --progress --newline"
             fi
             case $METHOD in
               1)
@@ -471,9 +471,27 @@ jobs:
             esac
           }
 
+          # Function to normalize YouTube URLs
+          normalize_youtube_url() {
+            local INPUT_URL="$1"
+            # Convert youtu.be short URLs to standard youtube.com format
+            if [[ "$INPUT_URL" =~ youtu\.be/([a-zA-Z0-9_-]+) ]]; then
+              VIDEO_ID="${BASH_REMATCH[1]}"
+              # Remove any query parameters from video ID
+              VIDEO_ID="${VIDEO_ID%%\?*}"
+              echo "https://www.youtube.com/watch?v=${VIDEO_ID}"
+            else
+              echo "$INPUT_URL"
+            fi
+          }
+
           URL_INDEX=0
           for URL in "${URL_LIST[@]}"; do
             URL_INDEX=$((URL_INDEX + 1))
+
+            # Normalize YouTube URL (convert short URLs to standard format)
+            URL=$(normalize_youtube_url "$URL")
+
             echo ""
             echo "============================================================"
             echo "Processing URL $URL_INDEX / $TOTAL_URLS : $URL"
@@ -498,10 +516,12 @@ jobs:
                     [ -f "$DOWNLOADED_FILE" ] || continue
                     ACTUAL_HEIGHT=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$DOWNLOADED_FILE" 2>/dev/null || echo "unknown")
                     echo "Requested quality: ${QUALITY}p | Actual video height: ${ACTUAL_HEIGHT}px"
-                    if [ "$ACTUAL_HEIGHT" != "unknown" ] && [ "$ACTUAL_HEIGHT" -lt $(( QUALITY - 50 )) ] 2>/dev/null; then
+                    if [ "$ACTUAL_HEIGHT" != "unknown" ] && [ "$ACTUAL_HEIGHT" -lt $(( QUALITY - 150 )) ] 2>/dev/null; then
                       echo "⚠️  Method $METHOD delivered ${ACTUAL_HEIGHT}p instead of ${QUALITY}p — rejecting and trying next method..."
                       QUALITY_OK=false
                       rm -f "$DOWNLOADED_FILE"
+                    elif [ "$ACTUAL_HEIGHT" != "unknown" ] && [ "$ACTUAL_HEIGHT" -lt "$QUALITY" ] 2>/dev/null; then
+                      echo "⚠️  Requested ${QUALITY}p but got ${ACTUAL_HEIGHT}p (close enough, accepting)"
                     else
                       echo "✅ Quality check passed (${ACTUAL_HEIGHT}p)."
                     fi
@@ -523,6 +543,14 @@ jobs:
                 if [ "$QUALITY_OK" = true ]; then
                   DOWNLOAD_SUCCESS=true
                   break
+                else
+                  # Quality not acceptable, but preserve thumbnail if it exists before cleaning up
+                  THUMB_TEMP=$(ls "$TMP_DIR"/*.jpg 2>/dev/null | head -1)
+                  if [ -n "$THUMB_TEMP" ] && [ -f "$THUMB_TEMP" ]; then
+                    mkdir -p "/tmp/saved_thumbnails_$"
+                    cp "$THUMB_TEMP" "/tmp/saved_thumbnails_$/thumb_${URL_INDEX}.jpg"
+                    echo "💾 Thumbnail saved for later use"
+                  fi
                 fi
               else
                 echo "Method $METHOD failed, waiting 3 seconds before next attempt..."
@@ -532,6 +560,13 @@ jobs:
 
             if [ "$DOWNLOAD_SUCCESS" = false ]; then
               echo "❌ All download methods failed for URL: $URL — skipping."
+
+              # Check if we saved a thumbnail during quality rejection attempts
+              if [ -f "/tmp/saved_thumbnails_$/thumb_${URL_INDEX}.jpg" ]; then
+                echo "📌 Found saved thumbnail, will use it anyway"
+                # We'll handle this in the file processing section
+              fi
+
               rm -rf "$TMP_DIR"
               continue
             fi
@@ -546,6 +581,12 @@ jobs:
             FILE_INDEX=0
             for FILE in "$TMP_DIR"/*; do
               [ -f "$FILE" ] || continue
+
+              # Skip thumbnail files - we'll handle them separately
+              if [[ "$FILE" == *.jpg ]] || [[ "$FILE" == *.webp ]]; then
+                continue
+              fi
+
               SIZE=$(stat -c%s "$FILE")
               BASENAME=$(basename "$FILE")
               FILENAME_NO_EXT="${BASENAME%.*}"
@@ -562,6 +603,16 @@ jobs:
 
               mkdir -p "$BACKUP_DIR/${FINAL_FOLDER_NAME}"
               echo "Created backup folder: $BACKUP_DIR/${FINAL_FOLDER_NAME}"
+
+              # ── Handle thumbnail (downloaded alongside video) ─────────────────
+              THUMB_FILE=$(ls "$TMP_DIR"/*.jpg 2>/dev/null | head -1)
+              if [ -n "$THUMB_FILE" ] && [ -f "$THUMB_FILE" ]; then
+                cp "$THUMB_FILE" "$BACKUP_DIR/${FINAL_FOLDER_NAME}/thumbnail.jpg"
+                THUMB_SIZE_KB=$(echo "scale=2; $(stat -c%s "$THUMB_FILE" 2>/dev/null || echo 0) / 1024" | bc 2>/dev/null || echo "0")
+                echo "✅ Thumbnail saved: thumbnail.jpg (${THUMB_SIZE_KB} KB)"
+              else
+                echo "⚠️  No thumbnail found for this video"
+              fi
 
               echo "${FILENAME_NO_EXT}|${FINAL_FOLDER_NAME}" >> /tmp/video_info.txt
 
@@ -614,6 +665,21 @@ jobs:
                 {
                   printf '%s\n' "# ${FILENAME_NO_EXT}"
                   printf '%s\n' ""
+
+                  # Add thumbnail if it exists
+                  if [ -f "$BACKUP_DIR/${FINAL_FOLDER_NAME}/thumbnail.jpg" ]; then
+                    THUMB_ENCODED=$(urlencode "thumbnail.jpg")
+                    THUMB_RAW_LINK="https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/${BRANCH}/videos/${FOLDER_ENCODED}/${THUMB_ENCODED}"
+                    printf '%s\n' "<div align=\"center\">"
+                    printf '%s\n' "  <picture>"
+                    printf '%s\n' "    <img src=\"${THUMB_RAW_LINK}\" alt=\"Video Thumbnail\" width=\"400\" />"
+                    printf '%s\n' "  </picture>"
+                    printf '%s\n' "</div>"
+                    printf '%s\n' ""
+                    printf '%s\n' "<br>"
+                    printf '%s\n' ""
+                  fi
+
                   printf '%s\n' "---"
                   printf '%s\n' ""
                   printf '%s\n' "## Video Information"
@@ -686,6 +752,21 @@ jobs:
                   {
                     printf '%s\n' "# ${FILENAME_NO_EXT}"
                     printf '%s\n' ""
+
+                    # Add thumbnail if it exists
+                    if [ -f "$BACKUP_DIR/${FINAL_FOLDER_NAME}/thumbnail.jpg" ]; then
+                      THUMB_ENCODED=$(urlencode "thumbnail.jpg")
+                      THUMB_RAW_LINK="https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/${BRANCH}/videos/${FOLDER_ENCODED}/${THUMB_ENCODED}"
+                      printf '%s\n' "<div align=\"center\">"
+                      printf '%s\n' "  <picture>"
+                      printf '%s\n' "    <img src=\"${THUMB_RAW_LINK}\" alt=\"Video Thumbnail\" width=\"400\" />"
+                      printf '%s\n' "  </picture>"
+                      printf '%s\n' "</div>"
+                      printf '%s\n' ""
+                      printf '%s\n' "<br>"
+                      printf '%s\n' ""
+                    fi
+
                     printf '%s\n' "---"
                     printf '%s\n' ""
                     printf '%s\n' "## Video Information"
@@ -738,6 +819,21 @@ jobs:
                   {
                     printf '%s\n' "# ${FILENAME_NO_EXT}"
                     printf '%s\n' ""
+
+                    # Add thumbnail if it exists
+                    if [ -f "$BACKUP_DIR/${FINAL_FOLDER_NAME}/thumbnail.jpg" ]; then
+                      THUMB_ENCODED=$(urlencode "thumbnail.jpg")
+                      THUMB_RAW_LINK="https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/${BRANCH}/videos/${FOLDER_ENCODED}/${THUMB_ENCODED}"
+                      printf '%s\n' "<div align=\"center\">"
+                      printf '%s\n' "  <picture>"
+                      printf '%s\n' "    <img src=\"${THUMB_RAW_LINK}\" alt=\"Video Thumbnail\" width=\"400\" />"
+                      printf '%s\n' "  </picture>"
+                      printf '%s\n' "</div>"
+                      printf '%s\n' ""
+                      printf '%s\n' "<br>"
+                      printf '%s\n' ""
+                    fi
+
                     printf '%s\n' "---"
                     printf '%s\n' ""
                     printf '%s\n' "## Video Information"
@@ -785,6 +881,339 @@ jobs:
           echo "===== Video info file ====="
           cat /tmp/video_info.txt
 
+      # NOTE: Thumbnail downloading is now integrated into the video download step
+      # Thumbnails are downloaded together with videos using --write-thumbnail flag
+      # This eliminates the need for a separate step and avoids re-triggering bot detection
+
+      - name: Download Subtitles
+        if: ${{ github.event.inputs.download_subtitles == 'true' }}
+        run: |
+          # ──────────────────────────────────────────────────────────────────────
+          # SUBTITLE DOWNLOADER
+          # • Downloads original subtitles (all languages) if they exist
+          # • Downloads Persian (fa) subtitles — or auto-translates if missing
+          # • Saves everything to: videos/<video_folder>/subtitle/
+          # • IMPORTANT: Errors in subtitle download will NOT stop video from being pushed
+          # ──────────────────────────────────────────────────────────────────────
+
+          # Disable exit on error - subtitle failures should NOT stop the workflow
+          set +e
+
+          BACKUP_DIR=$(cat /tmp/backup_dir_path.txt)
+          REPO_OWNER=$(cat /tmp/yt_repo_owner.txt)
+          REPO_NAME=$(cat /tmp/yt_repo_name.txt)
+          BRANCH=$(cat /tmp/yt_branch.txt)
+          mapfile -t URL_LIST < /tmp/yt_urls.txt
+
+          # Subtitle download mirrors the exact same bot-bypass strategy as the video
+          # downloader: same 8 methods, same proxy, same deno+EJS JS solver, same
+          # user-agents. Only the yt-dlp flags differ (subtitle flags vs format flags).
+
+          sub_download() {
+            local MODE=$1      # "all", "fa-native", "fa-auto", "en-auto", "auto-both"
+            local OUT="$2"
+            local SURL="$3"
+            local SUB_DIR
+            SUB_DIR=$(dirname "$OUT")
+
+            # Check helper: count subtitle files written so far
+            sub_count() { find "$SUB_DIR" -type f \( -name "*.vtt" -o -name "*.srt" \) 2>/dev/null | wc -l; }
+            fa_count()  { find "$SUB_DIR" -type f \( -name "*.fa.vtt" -o -name "*.fa.srt" \) 2>/dev/null | wc -l; }
+            en_count()  { find "$SUB_DIR" -type f \( -name "*.en.vtt" -o -name "*.en.srt" \) 2>/dev/null | wc -l; }
+
+            # Build the sub-mode flags
+            sub_flags() {
+              case $MODE in
+                all)        echo "--write-sub --sub-langs fa,en" ;;
+                fa-native)  echo "--write-sub --sub-langs fa" ;;
+                fa-auto)    echo "--write-auto-sub --sub-langs fa" ;;
+                en-auto)    echo "--write-auto-sub --sub-langs en" ;;
+                auto-both)  echo "--write-auto-sub --sub-langs en,fa" ;;
+              esac
+            }
+            SFLAGS=$(sub_flags)
+            COMMON_SUB="--sub-format vtt/srt/best --convert-subs vtt --skip-download --no-playlist --no-check-certificates --output ${OUT}"
+
+            for METHOD in 1 2 3 4 5 6 7 8; do
+              echo "  [subtitle] method $METHOD ..."
+              case $METHOD in
+                1)
+                  yt-dlp \
+                    --proxy "socks5://127.0.0.1:1080" \
+                    --extractor-args "youtube:player_client=web" \
+                    --js-runtimes deno \
+                    --remote-components ejs:github \
+                    --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+                    --add-header "Accept-Language:en-US,en;q=0.9" \
+                    $SFLAGS $COMMON_SUB "$SURL" 2>&1 || true
+                  ;;
+                2)
+                  yt-dlp \
+                    --proxy "socks5://127.0.0.1:1080" \
+                    --extractor-args "youtube:player_client=web" \
+                    --js-runtimes deno \
+                    --remote-components ejs:npm \
+                    --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+                    --add-header "Accept-Language:en-US,en;q=0.9" \
+                    $SFLAGS $COMMON_SUB "$SURL" 2>&1 || true
+                  ;;
+                3)
+                  yt-dlp \
+                    --proxy "socks5://127.0.0.1:1080" \
+                    --extractor-args "youtube:player_client=web,mweb,android_vr" \
+                    --js-runtimes deno \
+                    --remote-components ejs:github \
+                    $SFLAGS $COMMON_SUB "$SURL" 2>&1 || true
+                  ;;
+                4)
+                  yt-dlp \
+                    --proxy "socks5://127.0.0.1:1080" \
+                    --extractor-args "youtube:player_client=mweb" \
+                    $SFLAGS $COMMON_SUB "$SURL" 2>&1 || true
+                  ;;
+                5)
+                  yt-dlp \
+                    --proxy "socks5://127.0.0.1:1080" \
+                    --extractor-args "youtube:player_client=android_vr" \
+                    $SFLAGS $COMMON_SUB "$SURL" 2>&1 || true
+                  ;;
+                6)
+                  yt-dlp \
+                    --extractor-args "youtube:player_client=web" \
+                    --js-runtimes deno \
+                    --remote-components ejs:github \
+                    $SFLAGS $COMMON_SUB "$SURL" 2>&1 || true
+                  ;;
+                7)
+                  yt-dlp \
+                    --extractor-args "youtube:player_client=mweb" \
+                    $SFLAGS $COMMON_SUB "$SURL" 2>&1 || true
+                  ;;
+                8)
+                  yt-dlp \
+                    --proxy "socks5://127.0.0.1:1080" \
+                    --extractor-args "youtube:player_client=android" \
+                    --user-agent "Mozilla/5.0 (Linux; Android 12; SM-S906N Build/QP1A.190711.020) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36" \
+                    $SFLAGS $COMMON_SUB "$SURL" 2>&1 || true
+                  ;;
+              esac
+
+              # Stop as soon as we have subtitle files
+              if [ "$MODE" = "fa-native" ] || [ "$MODE" = "fa-auto" ]; then
+                [ "$(fa_count)" -gt 0 ] && { echo "  [subtitle] ✅ success with method $METHOD"; return 0; }
+              elif [ "$MODE" = "en-auto" ]; then
+                [ "$(en_count)" -gt 0 ] && { echo "  [subtitle] ✅ success with method $METHOD"; return 0; }
+              elif [ "$MODE" = "auto-both" ]; then
+                # Success only if we got BOTH languages (en AND fa)
+                local EN_GOT=$(en_count)
+                local FA_GOT=$(fa_count)
+                if [ "$EN_GOT" -gt 0 ] && [ "$FA_GOT" -gt 0 ]; then
+                  echo "  [subtitle] ✅ success with method $METHOD (both en+fa downloaded)"
+                  return 0
+                elif [ "$EN_GOT" -gt 0 ] || [ "$FA_GOT" -gt 0 ]; then
+                  echo "  [subtitle] ⚠️  method $METHOD: partial success (en:$EN_GOT, fa:$FA_GOT), trying next method..."
+                fi
+              else
+                [ "$(sub_count)" -gt 0 ] && { echo "  [subtitle] ✅ success with method $METHOD"; return 0; }
+              fi
+
+              sleep 1
+            done
+
+            echo "  [subtitle] ⚠️  all 8 methods failed for mode: $MODE"
+            return 1
+          }
+
+          URL_INDEX=0
+          while IFS='|' read -r ORIGINAL_NAME FOLDER_NAME; do
+            URL_INDEX=$((URL_INDEX + 1))
+            URL="${URL_LIST[$((URL_INDEX - 1))]}"
+
+            [ -z "$FOLDER_NAME" ] && continue
+
+            SUBTITLE_DIR="$BACKUP_DIR/${FOLDER_NAME}/subtitle"
+            mkdir -p "$SUBTITLE_DIR"
+
+            # Output template: no %(ext)s — yt-dlp appends .LANG.vtt automatically.
+            # Using %(ext)s with --skip-download resolves to the video container (mp4)
+            # and produces ugly Title.mp4.fa.vtt filenames.
+            OUT_TMPL="${SUBTITLE_DIR}/%(title)s"
+
+            echo ""
+            echo "============================================================"
+            echo "Downloading subtitles for: $FOLDER_NAME"
+            echo "URL: $URL"
+            echo "============================================================"
+
+            # ── Step 1: All original subtitles ────────────────────────────────
+            echo "→ Fetching all original subtitles (en, fa, and others)..."
+            sub_download "all" "$OUT_TMPL" "$URL" || true
+
+            # ── Step 2: Check what we got and download auto-generated if needed ─
+            echo ""
+            echo "→ Checking downloaded subtitles..."
+
+            EN_COUNT=$(find "$SUBTITLE_DIR" -type f \( -name "*.en.vtt" -o -name "*.en.srt" \) 2>/dev/null | wc -l)
+            FA_COUNT=$(find "$SUBTITLE_DIR" -type f \( -name "*.fa.vtt" -o -name "*.fa.srt" \) 2>/dev/null | wc -l)
+
+            if [ "$EN_COUNT" -gt 0 ]; then
+              echo "✅ English subtitle present (native)."
+            else
+              echo "⚠️  No native English subtitle."
+            fi
+
+            if [ "$FA_COUNT" -gt 0 ]; then
+              echo "✅ Persian subtitle present (native)."
+            else
+              echo "⚠️  No native Persian subtitle."
+            fi
+
+            # ── Step 3: Download auto-generated subtitles (en + fa together) ───
+            if [ "$EN_COUNT" -eq 0 ] || [ "$FA_COUNT" -eq 0 ]; then
+              echo ""
+              echo "→ Downloading auto-generated subtitles (en, fa)..."
+              sub_download "auto-both" "$OUT_TMPL" "$URL" || true
+
+              EN_COUNT=$(find "$SUBTITLE_DIR" -type f \( -name "*.en.vtt" -o -name "*.en.srt" \) 2>/dev/null | wc -l)
+              FA_COUNT=$(find "$SUBTITLE_DIR" -type f \( -name "*.fa.vtt" -o -name "*.fa.srt" \) 2>/dev/null | wc -l)
+
+              if [ "$EN_COUNT" -gt 0 ]; then
+                echo "✅ Auto-generated English subtitle downloaded."
+              else
+                echo "⚠️  English auto-generated subtitle unavailable."
+              fi
+
+              if [ "$FA_COUNT" -gt 0 ]; then
+                echo "✅ Auto-generated Persian subtitle downloaded."
+              else
+                echo "⚠️  Persian auto-generated subtitle unavailable."
+              fi
+
+              # ── Step 3.1: Retry missing subtitles individually ───
+              # If we still don't have both, try downloading them separately
+              if [ "$EN_COUNT" -eq 0 ]; then
+                echo ""
+                echo "→ Retrying English auto-generated subtitle separately..."
+                sub_download "en-auto" "$OUT_TMPL" "$URL" || true
+                EN_COUNT=$(find "$SUBTITLE_DIR" -type f \( -name "*.en.vtt" -o -name "*.en.srt" \) 2>/dev/null | wc -l)
+                if [ "$EN_COUNT" -gt 0 ]; then
+                  echo "✅ English subtitle downloaded on retry."
+                else
+                  echo "⚠️  English subtitle still unavailable after retry."
+                fi
+              fi
+
+              if [ "$FA_COUNT" -eq 0 ]; then
+                echo ""
+                echo "→ Retrying Persian auto-generated subtitle separately..."
+                sub_download "fa-auto" "$OUT_TMPL" "$URL" || true
+                FA_COUNT=$(find "$SUBTITLE_DIR" -type f \( -name "*.fa.vtt" -o -name "*.fa.srt" \) 2>/dev/null | wc -l)
+                if [ "$FA_COUNT" -gt 0 ]; then
+                  echo "✅ Persian subtitle downloaded on retry."
+                else
+                  echo "⚠️  Persian subtitle still unavailable after retry."
+                fi
+              fi
+            fi
+
+            # ── Step 4: Zip all subtitles → subtitle.zip, patch README ──────────
+            SUB_COUNT=$(find "$SUBTITLE_DIR" -type f 2>/dev/null | wc -l)
+
+            if [ "$SUB_COUNT" -eq 0 ]; then
+              echo "  (no subtitles available for this video)"
+              rmdir "$SUBTITLE_DIR" 2>/dev/null || true
+            else
+              echo ""
+              echo "→ Subtitle files downloaded ($SUB_COUNT file(s)):"
+              find "$SUBTITLE_DIR" -type f 2>/dev/null | while read -r SUB_FILE; do
+                echo "  • $(basename "$SUB_FILE")"
+              done
+
+              # Create subtitle.zip inside the video folder (not inside subtitle/)
+              ZIP_PATH="$BACKUP_DIR/${FOLDER_NAME}/subtitle.zip"
+              echo ""
+              echo "→ Zipping subtitles → subtitle.zip ..."
+
+              # Zip with error handling - don't fail if zip has issues
+              if (cd "$SUBTITLE_DIR" && zip -j "$ZIP_PATH" ./* 2>&1); then
+                rm -rf "$SUBTITLE_DIR"
+
+                if [ -f "$ZIP_PATH" ]; then
+                  ZIP_SIZE_MB=$(echo "scale=2; $(stat -c%s "$ZIP_PATH" 2>/dev/null || echo 0) / 1024 / 1024" | bc 2>/dev/null || echo "0.00")
+                  echo "✅ subtitle.zip created (${ZIP_SIZE_MB} MB)"
+                else
+                  echo "⚠️  Failed to create subtitle.zip - continuing without subtitles"
+                  rm -rf "$SUBTITLE_DIR" 2>/dev/null || true
+                  continue
+                fi
+              else
+                echo "⚠️  Zip command failed - continuing without subtitles"
+                rm -rf "$SUBTITLE_DIR" 2>/dev/null || true
+                continue
+              fi
+
+              # Build the raw download link for subtitle.zip - with error handling
+              FOLDER_ENCODED=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$FOLDER_NAME" 2>/dev/null || echo "$FOLDER_NAME")
+              SUB_ZIP_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('subtitle.zip', safe=''))" 2>/dev/null || echo "subtitle.zip")
+              SUB_RAW_LINK="https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/${BRANCH}/videos/${FOLDER_ENCODED}/${SUB_ZIP_ENCODED}"
+
+              # Patch the existing README.md — insert subtitle section after Video Information, before Download Links
+              # Wrapped in error handling - if this fails, we still want to push the video
+              README_FILE="$BACKUP_DIR/${FOLDER_NAME}/README.md"
+              if [ -f "$README_FILE" ]; then
+                # Write a temp file with the subtitle section
+                SUB_SECTION_FILE=$(mktemp 2>/dev/null || echo "/tmp/sub_section_$")
+                if [ -n "$SUB_SECTION_FILE" ]; then
+                  {
+                    printf '%s\n' ""
+                    printf '%s\n' "---"
+                    printf '%s\n' ""
+                    printf '%s\n' "## 🔤 Subtitles"
+                    printf '%s\n' ""
+                    printf '%s\n' "| # | File | Link |"
+                    printf '%s\n' "|---|------|------|"
+                    printf '%s\n' "| 1 | \`subtitle.zip\` | [Download](${SUB_RAW_LINK}) |"
+                    printf '%s\n' ""
+                    printf '%s\n' "> Contains all available subtitle languages. Extract to get \`.vtt\` files."
+                  } > "$SUB_SECTION_FILE" 2>/dev/null || true
+
+                  # Find line number of "## Download Link" section (works for both "## Download Links" and "## Download Link")
+                  DOWNLOAD_LINE=$(grep -n "^## Download Link" "$README_FILE" 2>/dev/null | head -1 | cut -d: -f1)
+                  if [ -n "$DOWNLOAD_LINE" ] && [ "$DOWNLOAD_LINE" -gt 0 ] 2>/dev/null; then
+                    # Find the "---" separator right before "## Download Link" (should be 2 lines before)
+                    INSERT_AT=$((DOWNLOAD_LINE - 2))
+                    if [ "$INSERT_AT" -lt 1 ]; then
+                      INSERT_AT=$((DOWNLOAD_LINE - 1))
+                    fi
+                    if head -n "$INSERT_AT" "$README_FILE" > "${README_FILE}.tmp" 2>/dev/null; then
+                      cat "$SUB_SECTION_FILE" >> "${README_FILE}.tmp" 2>/dev/null || true
+                      printf '\n' >> "${README_FILE}.tmp" 2>/dev/null || true
+                      tail -n "+$((INSERT_AT + 1))" "$README_FILE" >> "${README_FILE}.tmp" 2>/dev/null || true
+                      mv "${README_FILE}.tmp" "$README_FILE" 2>/dev/null && echo "README patched with subtitle section (after Video Information)." || echo "⚠️  README patch failed, but continuing..."
+                    fi
+                  else
+                    # Fallback: No "Download Link" section found — just append
+                    cat "$SUB_SECTION_FILE" >> "$README_FILE" 2>/dev/null && echo "README appended with subtitle download link." || echo "⚠️  README append failed, but continuing..."
+                  fi
+                  rm -f "$SUB_SECTION_FILE" 2>/dev/null || true
+                fi
+              fi
+            fi
+
+          done < /tmp/video_info.txt
+
+          echo ""
+          echo "Subtitle download phase complete."
+          echo "=== Final backup dir structure ==="
+          find "$BACKUP_DIR" -type f 2>/dev/null | sort || true
+
+          # Re-enable exit on error for subsequent steps
+          set -e
+
+          # Ensure this step always exits successfully, even if some subtitles failed
+          echo "✅ Subtitle step completed - any failures were handled gracefully"
+          exit 0
+
       - name: Stop WARP Container
         if: always()
         run: |
@@ -824,13 +1253,13 @@ jobs:
                 echo ""
                 echo "> No videos downloaded yet."
               } > videos/README.md
-              git add videos/README.md
+              git add -f videos/README.md
               if ! git diff --cached --quiet; then
-                git commit -m "[AVASAM] Initialize videos folder [skip ci]"
+                git commit --amend -m "[AVASAM] Videos update [skip ci]" 2>/dev/null || git commit -m "[AVASAM] Videos update [skip ci]"
                 PUSH_RETRY=0
                 while [ $PUSH_RETRY -lt 5 ]; do
                   PUSH_RETRY=$((PUSH_RETRY + 1))
-                  if timeout 60 git push origin HEAD:"$BRANCH"; then
+                  if timeout 60 git push --force origin HEAD:"$BRANCH"; then
                     echo "videos/ folder initialized and pushed."
                     break
                   else
@@ -865,7 +1294,7 @@ jobs:
               echo ""
             } > "$MASTER_README"
 
-            VIDEO_EMOJIS=("🎬" "🎥" "📽️" "🎞️" "📺" "🎦" "🎭" "🎪" "🎯" "🎮" "🎵" "🎶" "🎸" "🎹" "🎤")
+            VIDEO_EMOJIS=("🎬" "🎥" "📽️" "🎞️" "📺" "🎦" "▶️")
 
             NUM=0
 
@@ -914,10 +1343,10 @@ jobs:
               fi
 
               FILENAME=$(basename "$FILE_PATH")
-              git commit -m "[AVASAM] Add: $FILENAME [skip ci]" --quiet 2>/dev/null || true
+              git commit --amend -m "[AVASAM] Videos update [skip ci]" --quiet 2>/dev/null || git commit -m "[AVASAM] Videos update [skip ci]" --quiet 2>/dev/null || true
 
               echo "    Push attempt $RETRY/$MAX_RETRIES..."
-              if timeout 120 git push origin HEAD:"$BRANCH" 2>&1; then
+              if timeout 120 git push --force origin HEAD:"$BRANCH" 2>&1; then
                 echo "    SUCCESS!"
                 return 0
               else
@@ -954,17 +1383,17 @@ jobs:
                 cp -r "$BACKUP_DIR"/* videos/ 2>/dev/null || true
 
                 for BF in "${BATCH_FILES[@]}"; do
-                  git add "$BF" 2>/dev/null || true
+                  git add -f "$BF" 2>/dev/null || true
                 done
 
                 if ! git diff --cached --quiet 2>/dev/null; then
-                  git commit -m "[AVASAM] Add batch of $BATCH_COUNT files [skip ci]" --quiet 2>/dev/null || true
+                  git commit --amend -m "[AVASAM] Videos update [skip ci]" --quiet 2>/dev/null || git commit -m "[AVASAM] Videos update [skip ci]" --quiet 2>/dev/null || true
 
                   local PUSH_RETRY=0
                   local PUSH_SUCCESS=false
                   while [ $PUSH_RETRY -lt 5 ]; do
                     PUSH_RETRY=$((PUSH_RETRY + 1))
-                    if timeout 180 git push origin HEAD:"$BRANCH" 2>&1; then
+                    if timeout 180 git push --force origin HEAD:"$BRANCH" 2>&1; then
                       PUSH_SUCCESS=true
                       echo "    Batch pushed successfully!"
                       break
@@ -975,10 +1404,10 @@ jobs:
                       mkdir -p videos
                       cp -r "$BACKUP_DIR"/* videos/ 2>/dev/null || true
                       for BF in "${BATCH_FILES[@]}"; do
-                        git add "$BF" 2>/dev/null || true
+                        git add -f "$BF" 2>/dev/null || true
                       done
                       if ! git diff --cached --quiet 2>/dev/null; then
-                        git commit -m "[AVASAM] Add batch of $BATCH_COUNT files [skip ci]" --quiet 2>/dev/null || true
+                        git commit --amend -m "[AVASAM] Videos update [skip ci]" --quiet 2>/dev/null || git commit -m "[AVASAM] Videos update [skip ci]" --quiet 2>/dev/null || true
                       fi
                       sleep $((3 + RANDOM % 7))
                     fi
@@ -1009,16 +1438,16 @@ jobs:
               cp -r "$BACKUP_DIR"/* videos/ 2>/dev/null || true
 
               for BF in "${BATCH_FILES[@]}"; do
-                git add "$BF" 2>/dev/null || true
+                git add -f "$BF" 2>/dev/null || true
               done
 
               if ! git diff --cached --quiet 2>/dev/null; then
-                git commit -m "[AVASAM] Add final batch [skip ci]" --quiet 2>/dev/null || true
+                git commit --amend -m "[AVASAM] Videos update [skip ci]" --quiet 2>/dev/null || git commit -m "[AVASAM] Videos update [skip ci]" --quiet 2>/dev/null || true
 
                 local PUSH_RETRY=0
                 while [ $PUSH_RETRY -lt 5 ]; do
                   PUSH_RETRY=$((PUSH_RETRY + 1))
-                  if timeout 180 git push origin HEAD:"$BRANCH" 2>&1; then
+                  if timeout 180 git push --force origin HEAD:"$BRANCH" 2>&1; then
                     echo "    Final batch pushed successfully!"
                     break
                   else
@@ -1029,7 +1458,7 @@ jobs:
                     mkdir -p videos
                     cp -r "$BACKUP_DIR"/* videos/ 2>/dev/null || true
                     for BF in "${BATCH_FILES[@]}"; do
-                      git add "$BF" 2>/dev/null || true
+                      git add -f "$BF" 2>/dev/null || true
                     done
                     if ! git diff --cached --quiet 2>/dev/null; then
                       git commit -m "[AVASAM] Add final batch [skip ci]" --quiet 2>/dev/null || true
@@ -1061,7 +1490,7 @@ jobs:
 
           while IFS= read -r -d '' FILE; do
             ALL_FILES+=("$FILE")
-          done < <(find videos -type f \( -name "*.zip" -o -name "*.z[0-9]*" -o -name "*.mp4" -o -name "*.mp3" -o -name "*.m4a" -o -name "*.webm" -o -name "*.opus" -o -name "*.ogg" -o -name "*.aac" -o -name "*.flac" \) -print0 2>/dev/null | sort -z)
+          done < <(find videos -type f \( -name "*.zip" -o -name "*.z[0-9]*" -o -name "*.mp4" -o -name "*.mp3" -o -name "*.m4a" -o -name "*.webm" -o -name "*.opus" -o -name "*.ogg" -o -name "*.aac" -o -name "*.flac" -o -name "*.srt" -o -name "*.vtt" -o -name "*.ass" -o -name "*.ssa" -o -name "*.ttml" \) -print0 2>/dev/null | sort -z)
 
           TOTAL_FILES=${#ALL_FILES[@]}
           echo "Found $TOTAL_FILES files to push"
@@ -1086,17 +1515,17 @@ jobs:
           if [ $TOTAL_SIZE_MB -lt 100 ]; then
             echo "Small upload - pushing all at once..."
 
-            git add -A videos/
+            git add -fA videos/
             regenerate_master_readme
-            git add videos/README.md
+            git add -f videos/README.md
 
             if ! git diff --cached --quiet; then
-              git commit -m "[AVASAM] YouTube download [skip ci]"
+              git commit --amend -m "[AVASAM] Videos update [skip ci]" 2>/dev/null || git commit -m "[AVASAM] Videos update [skip ci]"
 
               PUSH_RETRY=0
               while [ $PUSH_RETRY -lt 10 ]; do
                 PUSH_RETRY=$((PUSH_RETRY + 1))
-                if timeout 300 git push origin HEAD:"$BRANCH"; then
+                if timeout 300 git push --force origin HEAD:"$BRANCH"; then
                   echo "Push successful!"
                   break
                 else
@@ -1106,11 +1535,11 @@ jobs:
                   git reset --hard origin/"$BRANCH"
                   mkdir -p videos
                   cp -r "$BACKUP_DIR"/* videos/
-                  git add -A videos/
+                  git add -fA videos/
                   regenerate_master_readme
-                  git add videos/README.md
+                  git add -f videos/README.md
                   if ! git diff --cached --quiet; then
-                    git commit -m "[AVASAM] YouTube download [skip ci]"
+                    git commit --amend -m "[AVASAM] Videos update [skip ci]" 2>/dev/null || git commit -m "[AVASAM] Videos update [skip ci]"
                   fi
                 fi
               done
@@ -1130,15 +1559,15 @@ jobs:
             cp -r "$BACKUP_DIR"/* videos/ 2>/dev/null || true
 
             regenerate_master_readme
-            git add videos/README.md
+            git add -f videos/README.md
 
             if ! git diff --cached --quiet 2>/dev/null; then
-              git commit -m "[AVASAM] Update video list [skip ci]" --quiet 2>/dev/null || true
+              git commit --amend -m "[AVASAM] Videos update [skip ci]" --quiet 2>/dev/null || git commit -m "[AVASAM] Videos update [skip ci]" --quiet 2>/dev/null || true
 
               PUSH_RETRY=0
               while [ $PUSH_RETRY -lt 5 ]; do
                 PUSH_RETRY=$((PUSH_RETRY + 1))
-                if timeout 60 git push origin HEAD:"$BRANCH" 2>&1; then
+                if timeout 60 git push --force origin HEAD:"$BRANCH" 2>&1; then
                   echo "Master README pushed!"
                   break
                 else
@@ -1152,5 +1581,5 @@ jobs:
           echo ""
           echo "=========================================="
           echo "All files pushed successfully!"
-          echo "AVASAM (https://avasam.ir)"
+          echo "made in AVASAM (https://avasam.ir)"
           echo "=========================================="
